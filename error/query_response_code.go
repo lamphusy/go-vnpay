@@ -1,4 +1,4 @@
-package vnpintgerrors
+package govnpayerrors
 
 import (
 	"fmt"
@@ -16,8 +16,8 @@ const (
 	QueryCodeOtherErrors         QueryResponseCode = "99"
 )
 
-// ToRspCode returns the response code as a two-digit string
-func (code QueryResponseCode) ToRspCode() string {
+// ToString returns the response code as a two-digit string
+func (code QueryResponseCode) ToString() string {
 	return string(code)
 }
 

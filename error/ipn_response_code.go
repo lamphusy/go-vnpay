@@ -1,4 +1,4 @@
-package vnpintgerrors
+package govnpayerrors
 
 import (
 	"fmt"
@@ -22,8 +22,8 @@ const (
 	IPNCodeOtherErrors              IPNResponseCode = "99"
 )
 
-// ToRspCode returns the response code as a two-digit string
-func (code IPNResponseCode) ToRspCode() string {
+// ToString returns the response code as a two-digit string
+func (code IPNResponseCode) ToString() string {
 	return string(code)
 }
 

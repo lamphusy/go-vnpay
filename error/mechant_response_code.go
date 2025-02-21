@@ -1,4 +1,4 @@
-package vnpintgerrors
+package govnpayerrors
 
 type MerchantResponseCode string
 
@@ -11,8 +11,8 @@ const (
 	MerchantRespUnknowError      MerchantResponseCode = "99"
 )
 
-// ToRspCode returns the response code as a two-digit string
-func (code MerchantResponseCode) ToRspCode() string {
+// ToString returns the response code as a two-digit string
+func (code MerchantResponseCode) ToString() string {
 	return string(code)
 }
 
