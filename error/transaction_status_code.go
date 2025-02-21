@@ -1,4 +1,4 @@
-package vnpintgerrors
+package govnpayerrors
 
 import (
 	"fmt"
@@ -17,8 +17,8 @@ const (
 	TransactionRefundRejected    TransactionStatus = "09"
 )
 
-// ToStatusCode returns the transaction status as a two-digit string
-func (status TransactionStatus) ToStatusCode() string {
+// ToString returns the transaction status as a two-digit string
+func (status TransactionStatus) ToString() string {
 	return string(status)
 }
 
