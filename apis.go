@@ -26,7 +26,7 @@ func GetPaymentURL(r *govnpaymodels.GetPaymentURLRequest) (string, error) {
 	}
 
 	if r.GetOrderInfo() == "" {
-		r.OrderInfo = fmt.Sprintf("%s: %s", DefaultMessagePayment, req.GetTxnRef())
+		r.OrderInfo = fmt.Sprintf("%s: %s", DefaultMessagePayment, r.GetTxnRef())
 	}
 
 	if r.GetTTL() == 0 {
