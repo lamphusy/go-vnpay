@@ -3,6 +3,7 @@ package govnpay
 import (
 	"fmt"
 	"net/url"
+	govnpayerrors "personal/vnpay-payment/error"
 	"personal/vnpay-payment/model"
 	"strconv"
 	"time"
@@ -33,9 +34,48 @@ func GetPaymentURL(r *govnpaymodels.GetPaymentURLRequest) (string, error) {
 		r.TTL = DefaultTTLPaymentURL
 	}
 
-	err := hdl.validateGetPaymentURLruest(r)
-	if err != nil {
-		return "", err
+	if r.GetAmount() <= 0 {
+		return govnpayerrors.FormatInvalidArgumentError("Amount must be greater than zero")
+	}
+
+	if req.GetOrderInfo() == "" {
+		return vnpintgerrors.FormatInvalidArgumentError("Order info is required")
+	}
+
+	if req.GetTxnRef() == "" {
+		return vnpintgerrors.FormatInvalidArgumentError("Transaction reference is required")
+	}
+
+	if req.GetCurrentCode() == "" {
+		return vnpintgerrors.FormatInvalidArgumentError("Current code is required")
+	}
+
+	if req.GetOrderType() == "" {
+		return vnpintgerrors.FormatInvalidArgumentError("Order type is required")
+	}
+
+	if req.GetCreateDate().IsZero() {
+		return vnpintgerrors.FormatInvalidArgumentError("Create date is required")
+	}
+
+	if req.GetTTL() == 0 {
+		return vnpintgerrors.FormatInvalidArgumentError("Expire date is required")
+	}
+
+	if time.Now().Add(req.GetTTL()).Before(time.Now()) {
+		return vnpintgerrors.FormatInvalidArgumentError("Time To Live (ttl) must be in the future")
+	}
+
+	if req.GetCreateDate().Add(req.GetTTL()).Before(req.GetCreateDate()) {
+		return vnpintgerrors.FormatInvalidArgumentError("Time To Live (ttl) be after create date")
+	}
+
+	if req.GetLocale() == "" {
+		return vnpintgerrors.FormatInvalidArgumentError("Locale is required")
+	}
+
+	if req.GetIpAddr() == "" {
+		return vnpintgerrors.FormatInvalidArgumentError("IP address is required")
 	}
 
 	loc, err := time.LoadLocation(DefaultTimeZone)
