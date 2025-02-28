@@ -3,7 +3,7 @@ package govnpay
 import (
 	"fmt"
 	"net/url"
-	govnpayerrors "personal/vnpay-payment/error"
+	"personal/vnpay-payment/helper"
 	"personal/vnpay-payment/model"
 	"strconv"
 	"time"
@@ -35,52 +35,52 @@ func GetPaymentURL(r *govnpaymodels.GetPaymentURLRequest) (string, error) {
 	}
 
 	if r.GetAmount() <= 0 {
-		return govnpayerrors.FormatInvalidArgumentError("Amount must be greater than zero")
+		return "", fmt.Errorf("amount must be greater than zero")
 	}
 
-	if req.GetOrderInfo() == "" {
-		return vnpintgerrors.FormatInvalidArgumentError("Order info is required")
+	if r.GetOrderInfo() == "" {
+		return "", fmt.Errorf("order info is required")
 	}
 
-	if req.GetTxnRef() == "" {
-		return vnpintgerrors.FormatInvalidArgumentError("Transaction reference is required")
+	if r.GetTxnRef() == "" {
+		return "", fmt.Errorf("transaction reference is required")
 	}
 
-	if req.GetCurrentCode() == "" {
-		return vnpintgerrors.FormatInvalidArgumentError("Current code is required")
+	if r.GetCurrentCode() == "" {
+		return "", fmt.Errorf("current code is required")
 	}
 
-	if req.GetOrderType() == "" {
-		return vnpintgerrors.FormatInvalidArgumentError("Order type is required")
+	if r.GetOrderType() == "" {
+		return "", fmt.Errorf("order type is required")
 	}
 
-	if req.GetCreateDate().IsZero() {
-		return vnpintgerrors.FormatInvalidArgumentError("Create date is required")
+	if r.GetCreateDate().IsZero() {
+		return "", fmt.Errorf("create date is required")
 	}
 
-	if req.GetTTL() == 0 {
-		return vnpintgerrors.FormatInvalidArgumentError("Expire date is required")
+	if r.GetTTL() == 0 {
+		return "", fmt.Errorf("expire date is required")
 	}
 
-	if time.Now().Add(req.GetTTL()).Before(time.Now()) {
-		return vnpintgerrors.FormatInvalidArgumentError("Time To Live (ttl) must be in the future")
+	if time.Now().Add(r.GetTTL()).Before(time.Now()) {
+		return "", fmt.Errorf("time To Live (ttl) must be in the future")
 	}
 
-	if req.GetCreateDate().Add(req.GetTTL()).Before(req.GetCreateDate()) {
-		return vnpintgerrors.FormatInvalidArgumentError("Time To Live (ttl) be after create date")
+	if r.GetCreateDate().Add(r.GetTTL()).Before(r.GetCreateDate()) {
+		return "", fmt.Errorf("time To Live (ttl) be after create date")
 	}
 
-	if req.GetLocale() == "" {
-		return vnpintgerrors.FormatInvalidArgumentError("Locale is required")
+	if r.GetLocale() == "" {
+		return "", fmt.Errorf("locale is required")
 	}
 
-	if req.GetIpAddr() == "" {
-		return vnpintgerrors.FormatInvalidArgumentError("IP address is required")
+	if r.GetIpAddr() == "" {
+		return "", fmt.Errorf("ip address is required")
 	}
 
 	loc, err := time.LoadLocation(DefaultTimeZone)
 	if err != nil {
-		return "", vnpintgerrors.FormatInternalError("Cannot load time location: " + err.Error())
+		return "", fmt.Errorf("cannot load time location: " + err.Error())
 	}
 
 	params := url.Values{}
@@ -89,9 +89,9 @@ func GetPaymentURL(r *govnpaymodels.GetPaymentURLRequest) (string, error) {
 	params.Add("vnp_CreateDate", r.GetCreateDate().In(loc).Format(DefaultTimeFormat))
 	params.Add("vnp_ExpireDate", time.Now().Add(r.GetTTL()).In(loc).Format(DefaultTimeFormat))
 
-	params.Add("vnp_Version", hdl.GetConfig().GetVersion())
-	params.Add("vnp_TmnCode", hdl.GetConfig().GetTmnCode())
-	params.Add("vnp_ReturnUrl", hdl.GetConfig().GetReturnURL())
+	params.Add("vnp_Version", r.GetVersion())
+	params.Add("vnp_TmnCode", r.GetTmnCode())
+	params.Add("vnp_ReturnUrl", r.GetReturnURL())
 
 	params.Add("vnp_CurrCode", r.GetCurrentCode())
 	params.Add("vnp_TxnRef", r.GetTxnRef())
@@ -102,10 +102,10 @@ func GetPaymentURL(r *govnpaymodels.GetPaymentURLRequest) (string, error) {
 
 	encodedParams := params.Encode()
 
-	secureHash := hdl.computeSecureHash(encodedParams)
+	secureHash := helper.ComputeSecureHash(encodedParams, r.GetHashAlgo(), r.GetHashSecret())
 	encodedParams += "&vnp_SecureHash=" + secureHash
 
-	respURL := hdl.GetConfig().GetInitPaymentURL() + "?" + encodedParams
+	respURL := r.GetInitPaymentURL() + "?" + encodedParams
 
 	return respURL, nil
 }
