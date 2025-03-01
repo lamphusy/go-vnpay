@@ -3,15 +3,45 @@ package govnpaymodels
 import "time"
 
 type GetPaymentURLRequest struct {
-	Amount      int64
-	OrderInfo   string
-	TxnRef      string
-	CurrentCode string
-	OrderType   string
-	CreateDate  time.Time
-	TTL         time.Duration
-	Locale      string
-	IpAddr      string
+	Version        string
+	TmnCode        string
+	ReturnURL      string
+	Amount         int64
+	OrderInfo      string
+	TxnRef         string
+	CurrentCode    string
+	OrderType      string
+	CreateDate     time.Time
+	TTL            time.Duration
+	Locale         string
+	IpAddr         string
+	HashSecret     string
+	HashAlgo       string
+	InitPaymentURL string
+}
+
+func (req *GetPaymentURLRequest) GetVersion() string {
+	if req != nil {
+		return req.Version
+	}
+
+	return ""
+}
+
+func (req *GetPaymentURLRequest) GetTmnCode() string {
+	if req != nil {
+		return req.TmnCode
+	}
+
+	return ""
+}
+
+func (req *GetPaymentURLRequest) GetReturnURL() string {
+	if req != nil {
+		return req.ReturnURL
+	}
+
+	return ""
 }
 
 func (req *GetPaymentURLRequest) GetAmount() int64 {
@@ -76,6 +106,27 @@ func (req *GetPaymentURLRequest) GetLocale() string {
 func (req *GetPaymentURLRequest) GetIpAddr() string {
 	if req != nil {
 		return req.IpAddr
+	}
+	return ""
+}
+
+func (req *GetPaymentURLRequest) GetHashSecret() string {
+	if req != nil {
+		return req.HashSecret
+	}
+	return ""
+}
+
+func (req *GetPaymentURLRequest) GetHashAlgo() string {
+	if req != nil {
+		return req.HashAlgo
+	}
+	return ""
+}
+
+func (req *GetPaymentURLRequest) GetInitPaymentURL() string {
+	if req != nil {
+		return req.InitPaymentURL
 	}
 	return ""
 }
