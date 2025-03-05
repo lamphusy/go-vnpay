@@ -1,10 +1,12 @@
 package govnpay
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/google/uuid"
+	"io"
 	"net/http"
 	"net/url"
 	"personal/vnpay-payment/helper"
@@ -133,14 +135,9 @@ func QueryTransaction(ctx context.Context, r *govnpaymodels.QueryTransactionRequ
 		return nil, err
 	}
 
-	buf, err := pkhttp.SendHttp(ctx, hdl.GetConfig().GetQueryTransURL(),
-		pkhttp.WithMethod(http.MethodPost),
-		pkhttp.WithBody(reqToVNPay),
-		pkhttp.WithContentType(pkhttp.ContentTypeApplicationJson),
-		pkhttp.WithSkipTls(),
-	)
+	buf, err := sendVNPayRequest(ctx, r.GetQueryTransURL(), reqToVNPay)
 	if err != nil {
-		return nil, fmt.Errorf("send http request error: " + err.Error())
+		return nil, fmt.Errorf("send http request error: %w", err)
 	}
 
 	resp := &govnpaymodels.VnPayQueryResponse{}
@@ -236,6 +233,32 @@ func buildQueryTransactionRequest(r *govnpaymodels.QueryTransactionRequest) (*go
 	resp.SecureHash = computeQueryTransactionRequestSecureHash(resp, r.GetHashAlgo(), r.GetHashSecret())
 
 	return resp, nil
+}
+
+func sendVNPayRequest(ctx context.Context, url string, reqToVNPay interface{}) ([]byte, error) {
+	jsonData, err := json.Marshal(reqToVNPay)
+	if err != nil {
+		return nil, fmt.Errorf("marshal request error: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewBuffer(jsonData))
+	if err != nil {
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("send request error: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+	}
+
+	return io.ReadAll(resp.Body)
 }
 
 func computeQueryTransactionRequestSecureHash(r *govnpaymodels.VnPayQueryRequest, hashAlgo string, hashSecret string) string {

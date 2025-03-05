@@ -13,6 +13,7 @@ type QueryTransactionRequest struct {
 	HashAlgo        string
 	TmnCode         string
 	Version         string
+	QueryTransURL   string
 }
 
 func (req *QueryTransactionRequest) GetRequestId() string {
@@ -81,6 +82,13 @@ func (req *QueryTransactionRequest) GetVersion() string {
 func (req *QueryTransactionRequest) GetTmnCode() string {
 	if req != nil {
 		return req.TmnCode
+	}
+	return ""
+}
+
+func (req *QueryTransactionRequest) GetQueryTransURL() string {
+	if req != nil {
+		return req.QueryTransURL
 	}
 	return ""
 }
