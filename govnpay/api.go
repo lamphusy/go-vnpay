@@ -22,10 +22,10 @@ func GetPaymentURL(r *govnpaymodels.GetPaymentURLRequest) (string, error) {
 		return "", fmt.Errorf("request cannot be nil")
 	}
 
-	setDefaults(r)
+	setPaymentURLDefaults(r)
 
 	// Validate request
-	if err := validateRequest(r); err != nil {
+	if err := validatePaymentURLRequest(r); err != nil {
 		return "", err
 	}
 
@@ -36,7 +36,7 @@ func GetPaymentURL(r *govnpaymodels.GetPaymentURLRequest) (string, error) {
 	}
 
 	// Build URL parameters
-	params := buildURLParams(r, loc)
+	params := buildPaymentURLParams(r, loc)
 	encodedParams := params.Encode()
 
 	// Compute and append secure hash
@@ -46,7 +46,7 @@ func GetPaymentURL(r *govnpaymodels.GetPaymentURLRequest) (string, error) {
 	return r.GetInitPaymentURL() + "?" + encodedParams, nil
 }
 
-func setDefaults(r *govnpaymodels.GetPaymentURLRequest) {
+func setPaymentURLDefaults(r *govnpaymodels.GetPaymentURLRequest) {
 	if r.GetLocale() == "" {
 		r.Locale = DefaultLocale
 	}
@@ -67,7 +67,7 @@ func setDefaults(r *govnpaymodels.GetPaymentURLRequest) {
 	}
 }
 
-func validateRequest(r *govnpaymodels.GetPaymentURLRequest) error {
+func validatePaymentURLRequest(r *govnpaymodels.GetPaymentURLRequest) error {
 	if r.GetAmount() <= 0 {
 		return fmt.Errorf("amount must be greater than zero")
 	}
@@ -104,7 +104,7 @@ func validateRequest(r *govnpaymodels.GetPaymentURLRequest) error {
 	return nil
 }
 
-func buildURLParams(r *govnpaymodels.GetPaymentURLRequest, loc *time.Location) url.Values {
+func buildPaymentURLParams(r *govnpaymodels.GetPaymentURLRequest, loc *time.Location) url.Values {
 	params := url.Values{}
 	params.Add("vnp_Command", DefaultCommandPayment)
 	params.Add("vnp_Amount", strconv.Itoa(int(r.GetAmount())*DefaultAmountFactor))
@@ -123,19 +123,19 @@ func buildURLParams(r *govnpaymodels.GetPaymentURLRequest, loc *time.Location) u
 }
 
 func QueryTransaction(ctx context.Context, r *govnpaymodels.QueryTransactionRequest) (*govnpaymodels.QueryTransactionResponse, error) {
-	fulFillQueryTransactionRequest(r)
+	fillQueryTransactionDefaults(r)
 
-	err := validateQueryTransactionRequest(r)
+	err := validateQueryTransaction(r)
 	if err != nil {
 		return nil, err
 	}
 
-	reqToVNPay, err := buildQueryTransactionRequest(r)
+	reqToVNPay, err := buildVNPayQueryRequest(r)
 	if err != nil {
 		return nil, err
 	}
 
-	buf, err := sendVNPayRequest(ctx, r.GetQueryTransURL(), reqToVNPay)
+	buf, err := sendHTTPRequest(ctx, r.GetQueryTransURL(), reqToVNPay)
 	if err != nil {
 		return nil, fmt.Errorf("send http request error: %w", err)
 	}
@@ -145,17 +145,17 @@ func QueryTransaction(ctx context.Context, r *govnpaymodels.QueryTransactionRequ
 		return nil, fmt.Errorf("cannot unmarshal query transaction response error " + err.Error())
 	}
 
-	secureHash := computeQueryTransactionResponseSecureHash(resp, r.GetHashAlgo(), r.GetHashSecret())
+	secureHash := computeResponseHash(resp, r.GetHashAlgo(), r.GetHashSecret())
 	if resp.GetSecureHash() != secureHash {
 		return nil, fmt.Errorf("invalid secure hash")
 	}
 
-	respToReturn := convertToQueryTransactionResponse(resp)
+	respToReturn := convertVNPayToQueryResponse(resp)
 
 	return respToReturn, nil
 }
 
-func fulFillQueryTransactionRequest(r *govnpaymodels.QueryTransactionRequest) {
+func fillQueryTransactionDefaults(r *govnpaymodels.QueryTransactionRequest) {
 	if r.GetRequestId() == "" {
 		r.RequestId = strings.Replace(uuid.NewString(), "-", "", -1)
 	}
@@ -167,7 +167,7 @@ func fulFillQueryTransactionRequest(r *govnpaymodels.QueryTransactionRequest) {
 	}
 }
 
-func validateQueryTransactionRequest(r *govnpaymodels.QueryTransactionRequest) error {
+func validateQueryTransaction(r *govnpaymodels.QueryTransactionRequest) error {
 	// Validate required string fields
 	requiredFields := map[string]string{
 		"Request ID":            r.GetRequestId(),
@@ -202,7 +202,7 @@ func validateQueryTransactionRequest(r *govnpaymodels.QueryTransactionRequest) e
 	return nil
 }
 
-func buildQueryTransactionRequest(r *govnpaymodels.QueryTransactionRequest) (*govnpaymodels.VnPayQueryRequest, error) {
+func buildVNPayQueryRequest(r *govnpaymodels.QueryTransactionRequest) (*govnpaymodels.VnPayQueryRequest, error) {
 	loc, err := time.LoadLocation(DefaultTimeZone)
 	if err != nil {
 		return nil, fmt.Errorf("cannot load time location: " + err.Error())
@@ -230,12 +230,12 @@ func buildQueryTransactionRequest(r *govnpaymodels.QueryTransactionRequest) (*go
 		IpAddr:          r.GetIpAddr(),
 	}
 
-	resp.SecureHash = computeQueryTransactionRequestSecureHash(resp, r.GetHashAlgo(), r.GetHashSecret())
+	resp.SecureHash = computeRequestHash(resp, r.GetHashAlgo(), r.GetHashSecret())
 
 	return resp, nil
 }
 
-func sendVNPayRequest(ctx context.Context, url string, reqToVNPay interface{}) ([]byte, error) {
+func sendHTTPRequest(ctx context.Context, url string, reqToVNPay interface{}) ([]byte, error) {
 	jsonData, err := json.Marshal(reqToVNPay)
 	if err != nil {
 		return nil, fmt.Errorf("marshal request error: %w", err)
@@ -261,7 +261,7 @@ func sendVNPayRequest(ctx context.Context, url string, reqToVNPay interface{}) (
 	return io.ReadAll(resp.Body)
 }
 
-func computeQueryTransactionRequestSecureHash(r *govnpaymodels.VnPayQueryRequest, hashAlgo string, hashSecret string) string {
+func computeRequestHash(r *govnpaymodels.VnPayQueryRequest, hashAlgo string, hashSecret string) string {
 	hashData := r.GetRequestId() + "|" +
 		r.GetVersion() + "|" +
 		DefaultCommandQueryTransaction + "|" +
@@ -275,7 +275,7 @@ func computeQueryTransactionRequestSecureHash(r *govnpaymodels.VnPayQueryRequest
 	return helper.ComputeSecureHash(hashData, hashAlgo, hashSecret)
 }
 
-func computeQueryTransactionResponseSecureHash(data *govnpaymodels.VnPayQueryResponse, hashAlgo string, hashSecret string) string {
+func computeResponseHash(data *govnpaymodels.VnPayQueryResponse, hashAlgo string, hashSecret string) string {
 	hashData := data.GetResponseId() + "|" +
 		data.GetCommand() + "|" +
 		data.GetResponseCode() + "|" +
@@ -295,7 +295,7 @@ func computeQueryTransactionResponseSecureHash(data *govnpaymodels.VnPayQueryRes
 	return helper.ComputeSecureHash(hashData, hashAlgo, hashSecret)
 }
 
-func convertToQueryTransactionResponse(vnpRes *govnpaymodels.VnPayQueryResponse) *govnpaymodels.QueryTransactionResponse {
+func convertVNPayToQueryResponse(vnpRes *govnpaymodels.VnPayQueryResponse) *govnpaymodels.QueryTransactionResponse {
 	if vnpRes == nil {
 		return nil
 	}
