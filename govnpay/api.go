@@ -243,6 +243,7 @@ func sendHTTPRequest(ctx context.Context, url string, reqToVNPay interface{}) ([
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewBuffer(jsonData))
 	if err != nil {
+		return nil, fmt.Errorf("create request error: %w", err)
 	}
 
 	req.Header.Set("Content-Type", "application/json")
